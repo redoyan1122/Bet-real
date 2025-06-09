@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>বাংলাদেশি Betting App (Dark UI)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #121212;
+      color: #eee;
+      font-family: 'Poppins', sans-serif;
+    }
+    .container {
+      max-width: 480px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    h2, h3, h4 {
+      text-align: center;
+      color: #fff;
+    }
+    .card {
+      background: #1e1e1e;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    label, small {
+      display: block;
+      margin-bottom: 6px;
+      color: #bbb;
+      font-size: 14px;
+    }
+    select, input[type="text"], input[type="number"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #2c2c2c;
+      color: #eee;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4a90e2;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #adminLogin, #adminSection {
+      display: none;
+    }
+    ul { padding-left: 0; list-style: none; }
+    ul li { background: #2a2a2a; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    ul li button { padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 6px; }
+    .balance { text-align: center; font-size: 18px; margin-top: 10px; color: #4a90e2; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>বাংলাদেশি Betting App</h2>
+
+    <div class="card">
+      <h3>বেট প্লেস</h3>
+      <label for="betMatch">ম্যাচ সিলেক্ট করুন</label>
+      <select id="betMatch"><option>ম্যাচ নেই</option></select>
+
+      <label for="betAmount">টাকা লিখুন</label>
+      <input type="number" id="betAmount" placeholder="টাকা লিখুন" />
+
+      <button onclick="placeBet()">বেট দিন</button>
+    </div>
+
+    <div class="card">
+      <h3>ডিপোজিট</h3>
+      <label for="depMethod">মেথড</label>
+      <select id="depMethod" onchange="showDepositInstructions()">
+        <option value="bKash">bKash</option>
+        <option value="Nagad">Nagad</option>
+      </select>
+
+      <div id="depositInstructions" style="margin-bottom:12px; font-size:14px; color:#ccc;"></div>
+
+      <label for="depAmount">ডিপোজিট অ্যামাউন্ট</label>
+      <input type="number" id="depAmount" placeholder="টাকা লিখুন" />
+
+      <label for="transactionId">ট্রানজেকশন আইডি</label>
+      <input type="text" id="transactionId" placeholder="Transaction ID দিন" />
+
+      <button onclick="requestDeposit()">ডিপোজিট করুন</button>
+    </div>
+
+    <div class="card">
+      <h3>উইথড্র</h3>
+      <label for="wdMethod">মেথড</label>
+      <select id="wdMethod">
+        <option value="bKash">bKash</option>
+        <option value="Nagad">Nagad</option>
+      </select>
+
+      <label for="wdNumber">মোবাইল নাম্বার</label>
+      <input type="text" id="wdNumber" placeholder="০১XXXXXXXXX" />
+
+      <label for="wdAmount">উইথড্র অ্যামাউন্ট</label>
+      <input type="number" id="wdAmount" placeholder="টাকা লিখুন" />
+
+      <button onclick="requestWithdraw()">উইথড্র করুন</button>
+    </div>
+
+    <small id="showAdmin" onclick="document.getElementById('adminLogin').style.display='block'">RR</small>
+
+    <div id="adminLogin">
+      <input type="password" id="adminPass" placeholder="Admin পাসওয়ার্ড দিন" />
+      <button onclick="checkAdmin()">লগইন</button>
+    </div>
+
+    <div id="adminSection">
+      <h3>এডমিন প্যানেল</h3>
+      <div class="card">
+        <h4>ম্যাচ যোগ করুন</h4>
+        <input type="text" id="adminMatch" placeholder="ম্যাচ নাম" />
+        <input type="number" id="winRate" placeholder="উইন রেট (%)" />
+        <button onclick="addMatch()">যোগ করুন</button>
+      </div>
+      <div class="card">
+        <h4>ডিপোজিট রিকুয়েস্ট</h4>
+        <ul id="depList"></ul>
+      </div>
+      <div class="card">
+        <h4>উইথড্র রিকুয়েস্ট</h4>
+        <ul id="wdList"></ul>
+      </div>
+      <div class="balance">বর্তমান ব্যালেন্স: <span id="bal">0</span>৳</div>
+    </div>
+  </div>
+
+  <script>
+    let matches = [], bal = 0, deps = [], wds = [];
+
+    function showDepositInstructions() {
+      const method = document.getElementById('depMethod').value;
+      const info = document.getElementById('depositInstructions');
+      if (method === 'bKash' || method === 'Nagad') {
+        info.innerHTML = `অপশন ১: <b>01816395401</b> এই নাম্বারে সেন্ড মানি করুন<br>
+                          অপশন ২: আপনার ডিপোজিট অ্যামাউন্ট লিখুন<br>
+                          অপশন ৩: আপনার ট্রানজেকশন আইডি লিখুন`;
+      } else {
+        info.innerHTML = '';
+      }
+    }
+
+    function placeBet() {
+      const match = document.getElementById('betMatch').value;
+      const amount = Number(document.getElementById('betAmount').value);
+      if (amount > 0 && amount <= bal) {
+        alert(`বেট প্লেস হয়েছে: ${match} - ${amount}৳`);
+        bal -= amount;
+        updateBalance();
+        document.getElementById('betAmount').value = '';
+      } else {
+        alert('সঠিক টাকা দিন বা ব্যালেন্স চেক করুন');
+      }
+    }
+
+    function requestDeposit() {
+      const method = document.getElementById('depMethod').value;
+      const amount = Number(document.getElementById('depAmount').value);
+      const txid = document.getElementById('transactionId').value.trim();
+      if (amount > 0 && txid !== '') {
+        deps.push({ method, amount });
+        alert('ডিপোজিট রিকুয়েস্ট গ্রহণ করা হয়েছে');
+        document.getElementById('depAmount').value = '';
+        document.getElementById('transactionId').value = '';
+        refreshAdmin();
+      } else {
+        alert('সব তথ্য দিন');
+      }
+    }
+
+    function requestWithdraw() {
+      const method = document.getElementById('wdMethod').value;
+      const number = document.getElementById('wdNumber').value.trim();
+      const amount = Number(document.getElementById('wdAmount').value);
+      if (number && amount > 0 && amount <= bal) {
+        wds.push({ method, number, amount });
+        alert('উইথড্র রিকুয়েস্ট পাঠানো হয়েছে');
+        document.getElementById('wdNumber').value = '';
+        document.getElementById('wdAmount').value = '';
+        refreshAdmin();
+      } else {
+        alert('তথ্য ভুল বা ব্যালেন্স কম');
+      }
+    }
+
+    function checkAdmin() {
+      const pass = document.getElementById('adminPass').value;
+      if (pass === 'rezoan') {
+        document.getElementById('adminSection').style.display = 'block';
+        document.getElementById('adminLogin').style.display = 'none';
+        refreshAdmin();
+      } else {
+        alert('পাসওয়ার্ড ভুল');
+      }
+    }
+
+    function addMatch() {
+      const m = document.getElementById('adminMatch').value.trim();
+      const r = document.getElementById('winRate').value.trim();
+      if (m && r) {
+        matches.push({ m, r });
+        updateMatchSelect();
+        alert('ম্যাচ যোগ হয়েছে');
+        document.getElementById('adminMatch').value = '';
+        document.getElementById('winRate').value = '';
+      }
+    }
+
+    function updateMatchSelect() {
+      const select = document.getElementById('betMatch');
+      select.innerHTML = '';
+      matches.forEach(match => {
+        const opt = document.createElement('option');
+        opt.textContent = match.m;
+        select.appendChild(opt);
+      });
+    }
+
+    function refreshAdmin() {
+      const depList = document.getElementById('depList');
+      depList.innerHTML = '';
+      deps.forEach((d, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${d.method} - ${d.amount}৳`;
+        const btn = document.createElement('button');
+        btn.textContent = 'এপ্রুভ';
+        btn.onclick = () => {
+          bal += d.amount;
+          deps.splice(i, 1);
+          refreshAdmin();
+          updateBalance();
+        };
+        li.appendChild(btn);
+        depList.appendChild(li);
+      });
+
+      const wdList = document.getElementById('wdList');
+      wdList.innerHTML = '';
+      wds.forEach((w, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${w.method} - ${w.number} - ${w.amount}৳`;
+        const btn = document.createElement('button');
+        btn.textContent = 'এপ্রুভ';
+        btn.onclick = () => {
+          bal -= w.amount;
+          wds.splice(i, 1);
+          refreshAdmin();
+          updateBalance();
+        };
+        li.appendChild(btn);
+        wdList.appendChild(li);
+      });
+    }
+
+    function updateBalance() {
+      document.getElementById('bal').textContent = bal;
+    }
+  </script>
+</body>
+</html>
